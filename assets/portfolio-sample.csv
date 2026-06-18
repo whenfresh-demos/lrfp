@@ -1,0 +1,6 @@
+Title/Ref,Postcode,Property number,Street,City,Tenancy status,Start date,Monthly rent,Mortgage provider,Product type,Mortgage end date,Mortgage balance,Payment type,Monthly payments
+PROP-001,BS1 4DJ,14,Harbour View,Manchester,Let,01/03/2023,1450,Lloyds Bank,Buy-to-Let Fixed,01/03/2028,198500,Repayment,892
+PROP-002,EH3 9AA,8,Royal Terrace,Edinburgh,Vacant,,0,Halifax,Tracker,15/09/2027,245000,Interest only,625
+PROP-003,CF10 1EP,22,Cathedral Road,Cardiff,Let,15/06/2024,1100,Lloyds Bank,Buy-to-Let Fixed,15/06/2029,167200,Repayment,756
+PROP-004,LS1 4DY,3,The Calls,Leeds,Let,01/01/2022,980,Santander,Standard Variable,01/01/2032,132400,Repayment,612
+PROP-005,B15 2TT,47,Edgbaston Park Road,Birmingham,Under offer,,0,Lloyds Bank,Buy-to-Let Fixed,20/11/2028,289000,Interest only,710
