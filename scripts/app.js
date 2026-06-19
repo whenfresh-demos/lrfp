@@ -115,15 +115,17 @@ function renderLbgApplyButton() {
   `;
 }
 
+const RENTAL_EVIDENCE_REPORT_URL = 'assets/sheffield-rental-evidence-report.pdf';
+
 function renderDataloftReportButton() {
   return `
-    <button type="button" class="btn btn-apply btn-order-report">
+    <a class="btn btn-apply btn-order-report" href="${RENTAL_EVIDENCE_REPORT_URL}" target="_blank" rel="noopener noreferrer">
       <span class="btn-apply__logo">
         <img src="assets/dataloft-logo.png" alt="" class="btn-order-report__logo" width="120" height="40">
       </span>
       <span class="btn-apply__divider" aria-hidden="true">|</span>
       <span class="btn-apply__label">ORDER RENTAL EVIDENCE REPORT</span>
-    </button>
+    </a>
   `;
 }
 
