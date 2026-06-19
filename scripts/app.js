@@ -989,14 +989,28 @@ function getPropertyDefaultTab(property) {
 
 function renderFinancialCompletionBanner() {
   return `
-    <section class="opportunities-section financial-completion-panel" aria-label="Complete financial information">
-      <div class="opportunities-section__header">
-        <h2 class="opportunities-section__title">Complete your financial information</h2>
-      </div>
-      <div class="opportunities-section__body">
-        <p class="opportunities-section__message">Add your mortgage and rental details to unlock insights, opportunities, and analysis for this property.</p>
-        <button type="button" class="btn opportunities-section__cta" data-action="open-financials-edit">Add details</button>
-      </div>
+    <section class="completion-prompt" aria-label="Complete property financial information">
+      <h2 class="completion-prompt__title">Complete your property finances</h2>
+      <p class="completion-prompt__message">As a landlord, add mortgage and rental details for this property to unlock insights, personalised opportunities, and portfolio analysis.</p>
+      <button type="button" class="btn completion-prompt__cta" data-action="open-financials-edit">Add financial details</button>
+    </section>
+  `;
+}
+
+function renderPortfolioFinancialCompletionBanner(properties) {
+  const incompleteCount = properties.filter((property) => !hasCompletedMortgageDetails(property)).length;
+  if (incompleteCount === 0) return '';
+
+  const firstIncompleteIndex = properties.findIndex((property) => !hasCompletedMortgageDetails(property));
+  const propertyLabel = incompleteCount === properties.length
+    ? 'each property'
+    : `${incompleteCount} ${incompleteCount === 1 ? 'property' : 'properties'}`;
+
+  return `
+    <section class="completion-prompt completion-prompt--portfolio" aria-label="Complete portfolio financial information">
+      <h2 class="completion-prompt__title">Complete your property finances</h2>
+      <p class="completion-prompt__message">As a landlord, add mortgage and rental details for ${propertyLabel} in your portfolio to unlock insights, personalised opportunities, and portfolio analysis.</p>
+      <a class="btn completion-prompt__cta" href="#/portfolio/property/${firstIncompleteIndex}/financials">Complete financial details</a>
     </section>
   `;
 }
@@ -2507,7 +2521,7 @@ function renderMarketplace() {
 
 function renderPortfolioEquityMetric(metrics) {
   if (!metrics.hasEquityData) {
-    return renderPortfolioMetric('Total equity', renderMissingIndicator(), {
+    return renderPortfolioMetric('Total equity', '—', {
       sub: 'Add mortgage details to a property to calculate equity',
     });
   }
@@ -2521,7 +2535,7 @@ function renderPortfolioEquityMetric(metrics) {
 
 function renderPortfolioLtvMetric(metrics) {
   if (!metrics.hasEquityData) {
-    return renderPortfolioMetric('Portfolio LTV', renderMissingIndicator());
+    return renderPortfolioMetric('Portfolio LTV', '—');
   }
 
   return renderPortfolioMetric('Portfolio LTV', formatPercent(metrics.overallLtv));
@@ -3232,6 +3246,8 @@ function renderSummary() {
         <h1 class="page-title">${escapeHtml(portfolio.name)}</h1>
 
         ${renderPortfolioReport(metrics)}
+
+        ${renderPortfolioFinancialCompletionBanner(portfolio.properties)}
 
         ${renderPortfolioOpportunitySections(metrics, portfolio)}
 
