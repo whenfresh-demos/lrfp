@@ -2628,6 +2628,57 @@ input::placeholder {
   max-width: 820px;
 }
 
+.modal__panel--report {
+  max-width: min(960px, 96vw);
+  padding: 20px 24px 24px;
+}
+
+.modal__report-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.modal__report-header .modal__title {
+  margin: 0;
+}
+
+.modal__close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 999px;
+  background: var(--lbg-bg-alt);
+  color: var(--lbg-text-muted);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.modal__close:hover,
+.modal__close:focus-visible {
+  background: var(--lbg-border);
+  color: var(--lbg-text);
+}
+
+.modal__report-body {
+  overflow: auto;
+  max-height: calc(90vh - 88px);
+  border: 1px solid var(--lbg-border);
+  border-radius: 12px;
+  background: #f8f9fa;
+}
+
+.rental-evidence-report__image {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .form-grid {
   display: grid;
   gap: 16px;

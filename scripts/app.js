@@ -115,7 +115,7 @@ function renderLbgApplyButton() {
   `;
 }
 
-const RENTAL_EVIDENCE_REPORT_PATH = 'assets/sheffield-rental-evidence-report.pdf';
+const RENTAL_EVIDENCE_REPORT_PATH = 'assets/rental-evidence-report.png';
 
 function resolveAssetUrl(relativePath) {
   const normalized = String(relativePath || '').replace(/^\//, '');
@@ -133,21 +133,32 @@ function resolveAssetUrl(relativePath) {
 }
 
 function renderDataloftReportButton() {
-  const reportUrl = resolveAssetUrl(RENTAL_EVIDENCE_REPORT_PATH);
   return `
-    <a
-      class="btn btn-apply btn-order-report"
-      href="${escapeHtml(reportUrl)}"
-      target="_blank"
-      rel="noopener noreferrer"
-      data-action="open-rental-report"
-    >
+    <button type="button" class="btn btn-apply btn-order-report" data-action="open-rental-report">
       <span class="btn-apply__logo">
         <img src="assets/dataloft-logo.png" alt="" class="btn-order-report__logo" width="120" height="40">
       </span>
       <span class="btn-apply__divider" aria-hidden="true">|</span>
       <span class="btn-apply__label">ORDER RENTAL EVIDENCE REPORT</span>
-    </a>
+    </button>
+  `;
+}
+
+function renderRentalEvidenceReportModal() {
+  const reportUrl = resolveAssetUrl(RENTAL_EVIDENCE_REPORT_PATH);
+  return `
+    <div class="modal" id="rental-evidence-modal" hidden>
+      <div class="modal__backdrop" data-action="close-rental-report"></div>
+      <div class="modal__panel modal__panel--report" role="dialog" aria-labelledby="rental-evidence-title" aria-modal="true">
+        <div class="modal__report-header">
+          <h2 class="modal__title" id="rental-evidence-title">Rental evidence report</h2>
+          <button type="button" class="modal__close" data-action="close-rental-report" aria-label="Close report">&times;</button>
+        </div>
+        <div class="modal__report-body">
+          <img src="${escapeHtml(reportUrl)}" alt="Rental evidence report for Sheffield showing achieved and asking rent analysis" class="rental-evidence-report__image">
+        </div>
+      </div>
+    </div>
   `;
 }
 
@@ -2287,6 +2298,7 @@ function renderPropertyRentReview(index) {
         </div>
       </div>
     </main>
+    ${renderRentalEvidenceReportModal()}
     ${renderFooter()}
   `;
 
@@ -2295,10 +2307,15 @@ function renderPropertyRentReview(index) {
 }
 
 function bindRentalEvidenceReport() {
-  document.querySelector('[data-action="open-rental-report"]')?.addEventListener('click', (event) => {
-    event.preventDefault();
-    const reportUrl = resolveAssetUrl(RENTAL_EVIDENCE_REPORT_PATH);
-    window.open(reportUrl, '_blank', 'noopener,noreferrer');
+  const modal = document.getElementById('rental-evidence-modal');
+  if (!modal) return;
+
+  const open = () => { modal.hidden = false; };
+  const close = () => { modal.hidden = true; };
+
+  document.querySelector('[data-action="open-rental-report"]')?.addEventListener('click', open);
+  modal.querySelectorAll('[data-action="close-rental-report"]').forEach((el) => {
+    el.addEventListener('click', close);
   });
 }
 
