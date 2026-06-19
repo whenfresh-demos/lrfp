@@ -10,8 +10,8 @@ Use this document when starting a new agent session on the **Lloyds RFP investor
 |------|-------|
 | **Project name** | LRFP (Lloyds RFP prototype) |
 | **Purpose** | Branded demo for investor landlords — portfolio creation, summary, property detail |
-| **GitHub** | https://github.com/jakesales/lrfp |
-| **Live demo** | https://jakesales.github.io/lrfp/ |
+| **GitHub** | https://github.com/whenfresh-demos/lrfp |
+| **Live demo** | https://whenfresh-demos.github.io/lrfp/ |
 | **Stack** | Static HTML / CSS / vanilla JS (ES modules, no build step) |
 | **Entry point** | `index.html` → `scripts/app.js` |
 | **State** | `sessionStorage` key `lrfp-state` |
@@ -258,7 +258,7 @@ git push origin main
 ## Git
 
 ```bash
-git remote -v   # origin → https://github.com/jakesales/lrfp.git
+git remote -v   # origin → https://github.com/whenfresh-demos/lrfp.git
 git branch      # main
 ```
 

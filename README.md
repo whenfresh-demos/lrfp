@@ -2,7 +2,7 @@
 
 Demonstration prototype for investor landlords, styled to match Lloyds Banking Group branding.
 
-**Live demo:** https://jakesales.github.io/lrfp/
+**Live demo:** https://whenfresh-demos.github.io/lrfp/
 
 **Agent / developer reference:** see [`PROJECT_REFERENCE.md`](PROJECT_REFERENCE.md) for architecture, routes, data model, and conventions.
 
