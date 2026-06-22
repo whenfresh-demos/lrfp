@@ -43,6 +43,7 @@ import {
   buildMortgageQuote,
   buildRefinanceQuote,
   buildRentReviewQuote,
+  buildMortgageRenewalQuote,
   buildEpcImprovementQuote,
   computePortfolioMetricsAfterEpcImprovement,
   getPortfolioEpcImprovementOpportunities,
@@ -54,9 +55,11 @@ import {
   computePortfolioMetricsAfterRentReview,
   getPortfolioRefinanceOpportunities,
   getPortfolioRentReviewOpportunities,
+  getPortfolioMortgageRenewalOpportunities,
   hasCompletedMortgageDetails,
   hasRefinanceOpportunity,
   hasRentReviewOpportunity,
+  hasMortgageRenewalOpportunity,
   getCurrentBestMortgageRate,
   REFINANCE_RATE_THRESHOLD,
   RENT_REVIEW_GAP_THRESHOLD,
@@ -1110,6 +1113,7 @@ function renderPropertyFinancialsTab(property, index) {
   const mortgageExpiryDisplay = formatMortgageExpiry(fin.mortgageExpiry);
   const purchaseDateDisplay = formatPurchaseDate(fin.purchaseDate);
   const refinanceOpportunityHtml = renderFinancialRefinanceOpportunity(property, index);
+  const renewalOpportunityHtml = renderFinancialMortgageRenewalOpportunity(property, index);
   const rentReviewOpportunityHtml = renderFinancialRentReviewOpportunity(property, index);
   const completionBannerHtml = hasCompletedMortgageDetails(property)
     ? ''
@@ -1126,6 +1130,7 @@ function renderPropertyFinancialsTab(property, index) {
         </div>
       </div>
 
+      ${renewalOpportunityHtml}
       ${refinanceOpportunityHtml}
       ${rentReviewOpportunityHtml}
 
@@ -1891,6 +1896,33 @@ function renderMortgageQuote(listingId) {
   bindCommonActions();
 }
 
+function renderFinancialMortgageRenewalOpportunity(property, index) {
+  if (!hasMortgageRenewalOpportunity(property)) return '';
+
+  const quote = buildMortgageRenewalQuote(property);
+  const exclusiveRateLabel = formatInterestRate(quote.exclusiveRate);
+
+  return `
+    <section class="opportunities-section financial-opportunity-panel" aria-label="Mortgage renewal opportunity">
+      <div class="opportunities-section__header">
+        <div class="section-title-row">
+          <h2 class="opportunities-section__title">Mortgage Renewal Opportunity</h2>
+          ${renderInfoTooltip('Your buy-to-let mortgage is approaching its product end date. Existing Lloyds landlord customers may receive preferential remortgage terms ahead of renewal.')}
+        </div>
+      </div>
+      <div class="opportunities-section__body">
+        <p class="opportunities-section__message">
+          Your buy-to-let mortgage is approaching its renewal date. Lloyds would like to offer you an exclusive remortgage rate as an existing landlord customer.
+        </p>
+        <p class="opportunities-section__detail">
+          Your current deal ends in <strong>${escapeHtml(quote.expiryDisplay || '—')}</strong>. Review indicative terms from <strong>${exclusiveRateLabel}</strong> on your remaining balance of ${formatCurrency(quote.loanAmount)}.
+        </p>
+        <button type="button" class="btn opportunities-section__cta" data-action="open-financials-edit">Review mortgage details</button>
+      </div>
+    </section>
+  `;
+}
+
 function renderFinancialRefinanceOpportunity(property, index) {
   if (!hasRefinanceOpportunity(property)) return '';
 
@@ -2002,6 +2034,35 @@ function renderMarketplaceOpportunitySection(metrics, portfolio) {
   `;
 }
 
+function renderMortgageRenewalOpportunitySection(portfolio) {
+  const renewalOpportunities = getPortfolioMortgageRenewalOpportunities(portfolio.properties);
+  if (renewalOpportunities.length === 0) return '';
+
+  const first = renewalOpportunities[0];
+  const firstAddress = formatAddress(first.property);
+  const exclusiveRateLabel = formatInterestRate(first.quote.exclusiveRate);
+
+  return `
+    <section class="opportunities-section" aria-label="Mortgage renewal opportunities">
+      <div class="opportunities-section__header">
+        <div class="section-title-row">
+          <h2 class="opportunities-section__title">Mortgage Renewal Opportunity</h2>
+          ${renderInfoTooltip('Properties with a buy-to-let mortgage approaching its product end date may qualify for an exclusive remortgage offer from Lloyds.')}
+        </div>
+      </div>
+      <div class="opportunities-section__body">
+        <p class="opportunities-section__message">
+          <strong>${escapeHtml(firstAddress)}</strong> has a buy-to-let mortgage approaching its renewal date. Lloyds would like to offer you an exclusive remortgage rate as an existing landlord customer.
+        </p>
+        <p class="opportunities-section__detail">
+          Current deal ends in <strong>${escapeHtml(first.quote.expiryDisplay || '—')}</strong> — review indicative terms from ${exclusiveRateLabel} on the financials tab.
+        </p>
+        <a class="btn opportunities-section__cta" href="#/portfolio/property/${first.index}/financials">View</a>
+      </div>
+    </section>
+  `;
+}
+
 function renderRefinanceOpportunitySection(portfolio) {
   const refinanceOpportunities = getPortfolioRefinanceOpportunities(portfolio.properties);
   if (refinanceOpportunities.length === 0) return '';
@@ -2097,6 +2158,7 @@ function renderEpcImprovementOpportunitySection(portfolio) {
 function renderPortfolioOpportunitySections(metrics, portfolio) {
   return [
     renderRefinanceOpportunitySection(portfolio),
+    renderMortgageRenewalOpportunitySection(portfolio),
     renderRentReviewOpportunitySection(portfolio),
     renderEpcImprovementOpportunitySection(portfolio),
     renderMarketplaceOpportunitySection(metrics, portfolio),

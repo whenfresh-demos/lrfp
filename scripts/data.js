@@ -63,6 +63,7 @@ export const MARKETPLACE_MORTGAGE_RATE = 5.29;
 export const CURRENT_BEST_MORTGAGE_RATE = 4.99;
 export const REFINANCE_RATE_THRESHOLD = 0.5;
 export const RENT_REVIEW_GAP_THRESHOLD = 500;
+export const MORTGAGE_RENEWAL_WINDOW_MONTHS = 3;
 export const POOR_EPC_RATINGS = ['D', 'E', 'F', 'G'];
 export const TARGET_EPC_RATINGS = ['A', 'B', 'C'];
 export const EPC_IMPROVEMENT_MORTGAGE_RATE = 4.99;
@@ -748,6 +749,57 @@ export function getPortfolioRentReviewOpportunities(properties) {
     .slice(0, 1);
 }
 
+export function parseMortgageEndDate(value) {
+  const str = String(value || '').trim();
+  if (!str) return null;
+
+  const normalized = /^\d{4}-\d{2}$/.test(str) ? `${str}-01` : str.slice(0, 10);
+  const date = new Date(normalized);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+export function hasMortgageRenewalOpportunity(property) {
+  if (!hasCompletedMortgageDetails(property)) return false;
+
+  const endDate = parseMortgageEndDate(property.mortgageEndDate);
+  if (!endDate) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const windowEnd = new Date(today);
+  windowEnd.setMonth(windowEnd.getMonth() + MORTGAGE_RENEWAL_WINDOW_MONTHS);
+
+  const expiry = new Date(endDate);
+  expiry.setHours(0, 0, 0, 0);
+
+  return expiry >= today && expiry <= windowEnd;
+}
+
+export function buildMortgageRenewalQuote(property) {
+  const fin = computePropertyFinancials(property);
+
+  return {
+    expiryDisplay: formatMortgageExpiry(property.mortgageEndDate),
+    currentRate: fin.interestRate,
+    exclusiveRate: getCurrentBestMortgageRate(),
+    loanAmount: fin.remainingMortgage,
+    mortgageProvider: fin.bank,
+  };
+}
+
+export function getPortfolioMortgageRenewalOpportunities(properties) {
+  return properties
+    .map((property, index) => ({ property, index }))
+    .filter(({ property }) => hasMortgageRenewalOpportunity(property))
+    .map(({ property, index }) => ({
+      property,
+      index,
+      quote: buildMortgageRenewalQuote(property),
+    }))
+    .slice(0, 1);
+}
+
 export function computePortfolioMetricsAfterRentReview(properties, propertyIndex, quote) {
   const updated = properties.map((property, index) => {
     if (index !== propertyIndex) return property;
@@ -1012,8 +1064,10 @@ export function applyFinancialDemoScenario(property, scenario, { propertyIndex =
   const base = enrichPropertyWithAvm(property);
   const highlightRefinance = propertyIndex === 0;
   const highlightRentReview = propertyIndex === 1;
+  const highlightRenewal = propertyIndex === 1;
   const financials = getDemoFinancials(base, {
     highlightRefinance,
+    highlightRenewal,
   });
 
   property.purchasePrice = financials.purchasePrice;
@@ -1125,7 +1179,7 @@ export function formatMortgageExpiry(value) {
 }
 
 /** Demo financials for a property — derived from AVM for consistent storytelling. */
-export function getDemoFinancials(property, { highlightRefinance = false } = {}) {
+export function getDemoFinancials(property, { highlightRefinance = false, highlightRenewal = false } = {}) {
   const avm = Number(property.avmValue) || 400000;
   const seed = `${property.postcode || ''}${property.propertyNumber || ''}`.length;
   const purchasePrice = Math.round(avm * (0.90 + (seed % 3) * 0.02));
@@ -1134,9 +1188,18 @@ export function getDemoFinancials(property, { highlightRefinance = false } = {})
     ? '5.85'
     : (4.35 + (seed % 3) * 0.1).toFixed(2);
   const banks = ['Barclays', 'Lloyds Bank', 'Halifax', 'NatWest'];
-  const bank = banks[seed % banks.length];
-  const expiryYear = 2026 + (seed % 3);
-  const expiryMonth = String(6 + (seed % 6)).padStart(2, '0');
+  const bank = highlightRenewal ? 'Lloyds Bank' : banks[seed % banks.length];
+  let expiryYear;
+  let expiryMonth;
+  if (highlightRenewal) {
+    const renewalDate = new Date();
+    renewalDate.setMonth(renewalDate.getMonth() + 2);
+    expiryYear = renewalDate.getFullYear();
+    expiryMonth = String(renewalDate.getMonth() + 1).padStart(2, '0');
+  } else {
+    expiryYear = 2026 + (seed % 3);
+    expiryMonth = String(6 + (seed % 6)).padStart(2, '0');
+  }
   const purchaseYear = 2018 + (seed % 6);
   const purchaseMonth = String(3 + (seed % 9)).padStart(2, '0');
   const marketRent = Number(property.marketRent) || 1400;
