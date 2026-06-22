@@ -950,6 +950,78 @@ input::placeholder {
   padding: 12px 24px;
 }
 
+.broker-share-panel {
+  margin-top: 20px;
+  padding: 20px;
+  border-radius: 12px;
+  background: var(--lbg-bg-alt);
+  border: 1px solid var(--lbg-border);
+}
+
+.broker-share-panel__title {
+  margin: 0 0 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--lbg-text);
+}
+
+.broker-share-panel__text {
+  margin: 0 0 16px;
+  font-size: 0.875rem;
+  color: var(--lbg-text-muted);
+  line-height: 1.5;
+}
+
+.broker-share-panel__label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--lbg-text);
+}
+
+.broker-share-panel__row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.broker-share-panel__input {
+  flex: 1 1 200px;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--lbg-border);
+  border-radius: var(--lbg-radius);
+  font: inherit;
+  color: var(--lbg-text);
+  background: var(--lbg-bg);
+}
+
+.broker-share-panel__input:focus {
+  outline: 2px solid var(--lbg-focus);
+  outline-offset: 1px;
+}
+
+.broker-share-panel__submit {
+  flex-shrink: 0;
+}
+
+.broker-share-modal__json {
+  margin: 0;
+  padding: 16px;
+  max-height: 60vh;
+  overflow: auto;
+  background: #1e1e1e;
+  color: #d4d4d4;
+  border-radius: var(--lbg-radius);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .btn-order-report {
   padding: 14px 24px;
   background: #efefef;

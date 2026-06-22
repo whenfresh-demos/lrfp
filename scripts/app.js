@@ -125,6 +125,152 @@ function renderLbgApplyButton() {
   `;
 }
 
+function renderBrokerSharePanel() {
+  return `
+    <div class="broker-share-panel">
+      <h3 class="broker-share-panel__title">Share with your mortgage broker</h3>
+      <p class="broker-share-panel__text">Send your portfolio summary and this illustrative opportunity to a mortgage broker of your choice so they can review your position and advise on next steps.</p>
+      <div class="broker-share-panel__form">
+        <label class="broker-share-panel__label" for="broker-email">Broker e-mail address</label>
+        <div class="broker-share-panel__row">
+          <input
+            type="email"
+            id="broker-email"
+            class="broker-share-panel__input"
+            placeholder="broker@example.com"
+            autocomplete="email"
+            required
+          >
+          <button type="button" class="btn btn-secondary broker-share-panel__submit" data-action="send-to-broker">Send portfolio</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderBrokerShareModal() {
+  return `
+    <div class="modal" id="broker-share-modal" hidden>
+      <div class="modal__backdrop" data-action="close-broker-share"></div>
+      <div class="modal__panel modal__panel--wide" role="dialog" aria-labelledby="broker-share-title" aria-modal="true">
+        <div class="modal__report-header">
+          <h2 class="modal__title" id="broker-share-title">Portfolio sent to broker</h2>
+          <button type="button" class="modal__close" data-action="close-broker-share" aria-label="Close">&times;</button>
+        </div>
+        <p class="modal__intro">Demo preview of the payload that would be transmitted. No e-mail is actually sent.</p>
+        <pre class="broker-share-modal__json" id="broker-share-json" aria-label="Portfolio payload preview"></pre>
+      </div>
+    </div>
+  `;
+}
+
+function serializePropertyForBroker(property, index) {
+  return {
+    index,
+    titleRef: property.titleRef,
+    address: formatAddress(property),
+    estimatedValue: Number(property.avmValue) || null,
+    marketRent: Number(property.marketRent) || null,
+    achievedRent: Number(property.rentAgreed) || null,
+    occupancy: property.occupancy || property.tenancyStatus || null,
+    mortgageBalance: Number(String(property.mortgageBalance || '').replace(/[^0-9.]/g, '')) || null,
+    interestRate: Number(String(property.interestRate || '').replace(/[^0-9.]/g, '')) || null,
+    mortgageProvider: property.mortgageProvider || null,
+    mortgageProductType: property.mortgageProductType || property.productType || null,
+    mortgageEndDate: property.mortgageEndDate || null,
+    monthlyMortgagePayment: Number(property.monthlyPayments) || null,
+  };
+}
+
+function serializePortfolioSummaryForBroker(metrics) {
+  return {
+    totalProperties: metrics.totalProperties,
+    totalPortfolioValue: metrics.totalPortfolioValue,
+    totalMortgageBalance: metrics.totalMortgageBalance,
+    totalEquity: metrics.totalEquity,
+    portfolioLtv: metrics.overallLtv,
+    totalMarketRent: metrics.totalMarketRent,
+    totalAchievedRent: metrics.totalRentAgreed,
+    grossYield: metrics.grossYield,
+    interestCoverageRatio: metrics.icr,
+    occupiedProperties: metrics.occupancyFraction,
+  };
+}
+
+function buildBrokerShareMessage(opportunityType, context) {
+  const portfolioName = context.portfolioName;
+
+  if (opportunityType === 'refinance') {
+    return `Dear broker,\n\nPlease review my buy-to-let portfolio (“${portfolioName}”) and the attached refinance opportunity for ${context.subjectAddress}. I would like your advice on switching this property to the indicative rate shown and any impact on my wider portfolio.\n\nThank you.`;
+  }
+
+  if (opportunityType === 'renewal') {
+    return `Dear broker,\n\nPlease review my buy-to-let portfolio (“${portfolioName}”) and the attached mortgage renewal opportunity for ${context.subjectAddress}. My current deal is approaching its end date and I would like your guidance on the indicative renewal terms.\n\nThank you.`;
+  }
+
+  return `Dear broker,\n\nPlease review my buy-to-let portfolio (“${portfolioName}”) and the attached acquisition opportunity for ${context.subjectAddress}. I am considering this purchase and would appreciate your advice on indicative mortgage terms and portfolio affordability.\n\nThank you.`;
+}
+
+function buildBrokerSharePayload({
+  brokerEmail,
+  opportunityType,
+  opportunity,
+  portfolio,
+  metrics,
+  subjectAddress,
+}) {
+  return {
+    messageToBroker: buildBrokerShareMessage(opportunityType, {
+      portfolioName: portfolio.name,
+      subjectAddress,
+    }),
+    recipient: brokerEmail,
+    sentAt: new Date().toISOString(),
+    portfolio: {
+      name: portfolio.name,
+      createdAt: portfolio.createdAt || null,
+      summary: serializePortfolioSummaryForBroker(metrics),
+      properties: metrics.properties.map((property, index) => serializePropertyForBroker(property, index)),
+    },
+    opportunity: {
+      type: opportunityType,
+      ...opportunity,
+    },
+  };
+}
+
+function bindBrokerShare(getPayload) {
+  const modal = document.getElementById('broker-share-modal');
+  const jsonEl = document.getElementById('broker-share-json');
+  const emailInput = document.getElementById('broker-email');
+  if (!modal || !jsonEl) return;
+
+  const open = (payload) => {
+    jsonEl.textContent = JSON.stringify(payload, null, 2);
+    modal.hidden = false;
+  };
+  const close = () => { modal.hidden = true; };
+
+  document.querySelector('[data-action="send-to-broker"]')?.addEventListener('click', () => {
+    const email = emailInput?.value.trim() || '';
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      emailInput?.setCustomValidity('Enter a valid broker e-mail address');
+      emailInput?.reportValidity();
+      emailInput?.focus();
+      return;
+    }
+
+    emailInput?.setCustomValidity('');
+    open(getPayload(email));
+  });
+
+  emailInput?.addEventListener('input', () => emailInput.setCustomValidity(''));
+
+  modal.querySelectorAll('[data-action="close-broker-share"]').forEach((el) => {
+    el.addEventListener('click', close);
+  });
+}
+
 const RENTAL_EVIDENCE_REPORT_PATH = 'assets/rental-evidence-report.png';
 
 function resolveAssetUrl(relativePath) {
@@ -1860,6 +2006,7 @@ function renderMortgageQuote(listingId) {
             </dl>
             <p class="quote-summary__note">Illustrative buy-to-let quote based on a ${quote.depositPct}% deposit and interest-only servicing at ${formatInterestRate(quote.interestRate)}. Subject to affordability, valuation and lending criteria.</p>
             ${renderLbgApplyButton()}
+            ${renderBrokerSharePanel()}
           </section>
 
           <section class="card quote-comparison">
@@ -1896,10 +2043,25 @@ function renderMortgageQuote(listingId) {
         </div>
       </div>
     </main>
+    ${renderBrokerShareModal()}
     ${renderFooter()}
   `;
 
   bindCommonActions();
+  bindBrokerShare((brokerEmail) => buildBrokerSharePayload({
+    brokerEmail,
+    opportunityType: 'acquisition',
+    opportunity: {
+      listingId: listing.id,
+      subjectAddress: address,
+      bedrooms: listing.bedrooms,
+      propertyType: listing.propertyType,
+      indicativeQuote: quote,
+    },
+    portfolio,
+    metrics: beforeMetrics,
+    subjectAddress: address,
+  }));
 }
 
 function renderFinancialMortgageRenewalOpportunity(property, index) {
@@ -2241,6 +2403,7 @@ function renderPropertyRefinanceQuote(index) {
             </dl>
             <p class="quote-summary__note">Illustrative refinance quote based on interest-only servicing at ${formatInterestRate(quote.bestRate)} on your existing balance. Subject to affordability, valuation, early repayment charges and lending criteria.</p>
             ${renderLbgApplyButton()}
+            ${renderBrokerSharePanel()}
           </section>
 
           <section class="card quote-comparison">
@@ -2277,10 +2440,24 @@ function renderPropertyRefinanceQuote(index) {
         </div>
       </div>
     </main>
+    ${renderBrokerShareModal()}
     ${renderFooter()}
   `;
 
   bindCommonActions();
+  bindBrokerShare((brokerEmail) => buildBrokerSharePayload({
+    brokerEmail,
+    opportunityType: 'refinance',
+    opportunity: {
+      propertyIndex: index,
+      propertyTitleRef: property.titleRef,
+      subjectAddress: address,
+      indicativeQuote: quote,
+    },
+    portfolio,
+    metrics: beforeMetrics,
+    subjectAddress: address,
+  }));
 }
 
 function renderPropertyMortgageRenewalQuote(index) {
@@ -2359,6 +2536,7 @@ function renderPropertyMortgageRenewalQuote(index) {
             </dl>
             <p class="quote-summary__note">Illustrative renewal remortgage quote for existing Lloyds landlord customers, based on interest-only servicing at ${exclusiveRateLabel} on your existing balance. Subject to affordability, valuation, product availability and lending criteria.</p>
             ${renderLbgApplyButton()}
+            ${renderBrokerSharePanel()}
           </section>
 
           <section class="card quote-comparison">
@@ -2395,10 +2573,24 @@ function renderPropertyMortgageRenewalQuote(index) {
         </div>
       </div>
     </main>
+    ${renderBrokerShareModal()}
     ${renderFooter()}
   `;
 
   bindCommonActions();
+  bindBrokerShare((brokerEmail) => buildBrokerSharePayload({
+    brokerEmail,
+    opportunityType: 'renewal',
+    opportunity: {
+      propertyIndex: index,
+      propertyTitleRef: property.titleRef,
+      subjectAddress: address,
+      indicativeQuote: quote,
+    },
+    portfolio,
+    metrics: beforeMetrics,
+    subjectAddress: address,
+  }));
 }
 
 function renderPropertyRentReview(index) {
