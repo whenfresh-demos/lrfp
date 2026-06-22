@@ -1290,7 +1290,7 @@ function computePortfolioValueChange3m(properties, totalPortfolioValue) {
     (acc, property) => acc + `${property.postcode || ''}${property.propertyNumber || ''}`.length,
     0,
   );
-  const pct = Number((-0.8 + (seed % 9) * 0.35).toFixed(1));
+  const pct = Number((0.8 + (seed % 8) * 0.35).toFixed(1));
   const amount = Math.round(totalPortfolioValue * (pct / 100));
   return { amount, pct };
 }
