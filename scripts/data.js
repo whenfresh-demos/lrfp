@@ -778,13 +778,21 @@ export function hasMortgageRenewalOpportunity(property) {
 
 export function buildMortgageRenewalQuote(property) {
   const fin = computePropertyFinancials(property);
+  const exclusiveRate = Number((getCurrentBestMortgageRate() - 0.05).toFixed(2));
+  const currentMonthlyPayment = Math.round(fin.remainingMortgage * (fin.interestRate / 100 / 12));
+  const newMonthlyPayment = Math.round(fin.remainingMortgage * (exclusiveRate / 100 / 12));
 
   return {
     expiryDisplay: formatMortgageExpiry(property.mortgageEndDate),
     currentRate: fin.interestRate,
-    exclusiveRate: getCurrentBestMortgageRate(),
+    exclusiveRate,
+    rateDifference: Number(Math.max(0, fin.interestRate - exclusiveRate).toFixed(2)),
     loanAmount: fin.remainingMortgage,
     mortgageProvider: fin.bank,
+    mortgageProductType: fin.mortgageProductType,
+    currentMonthlyPayment,
+    newMonthlyPayment,
+    monthlySavings: Math.max(0, currentMonthlyPayment - newMonthlyPayment),
   };
 }
 
@@ -798,6 +806,13 @@ export function getPortfolioMortgageRenewalOpportunities(properties) {
       quote: buildMortgageRenewalQuote(property),
     }))
     .slice(0, 1);
+}
+
+export function computePortfolioMetricsAfterMortgageRenewal(properties, propertyIndex, quote) {
+  return computePortfolioMetricsAfterRefinance(properties, propertyIndex, {
+    bestRate: quote.exclusiveRate,
+    newMonthlyPayment: quote.newMonthlyPayment,
+  });
 }
 
 export function computePortfolioMetricsAfterRentReview(properties, propertyIndex, quote) {
@@ -1186,7 +1201,9 @@ export function getDemoFinancials(property, { highlightRefinance = false, highli
   const remainingMortgage = Math.round(avm * (0.915 + (seed % 2) * 0.005));
   const interestRate = highlightRefinance
     ? '5.85'
-    : (4.35 + (seed % 3) * 0.1).toFixed(2);
+    : highlightRenewal
+      ? '5.49'
+      : (4.35 + (seed % 3) * 0.1).toFixed(2);
   const banks = ['Barclays', 'Lloyds Bank', 'Halifax', 'NatWest'];
   const bank = highlightRenewal ? 'Lloyds Bank' : banks[seed % banks.length];
   let expiryYear;

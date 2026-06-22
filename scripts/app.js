@@ -52,6 +52,7 @@ import {
   ensurePropertyEpcBasics,
   computePortfolioMetricsAfterPurchase,
   computePortfolioMetricsAfterRefinance,
+  computePortfolioMetricsAfterMortgageRenewal,
   computePortfolioMetricsAfterRentReview,
   getPortfolioRefinanceOpportunities,
   getPortfolioRentReviewOpportunities,
@@ -192,6 +193,11 @@ function parseRoute(route) {
   const rentReviewMatch = route.match(/^\/portfolio\/property\/(\d+)\/rent-review$/);
   if (rentReviewMatch) {
     return { type: 'rent-review', index: Number(rentReviewMatch[1]) };
+  }
+
+  const mortgageRenewalQuoteMatch = route.match(/^\/portfolio\/property\/(\d+)\/mortgage-renewal-quote$/);
+  if (mortgageRenewalQuoteMatch) {
+    return { type: 'mortgage-renewal-quote', index: Number(mortgageRenewalQuoteMatch[1]) };
   }
 
   const epcImprovementMatch = route.match(/^\/portfolio\/property\/(\d+)\/epc-improvement$/);
@@ -1917,7 +1923,7 @@ function renderFinancialMortgageRenewalOpportunity(property, index) {
         <p class="opportunities-section__detail">
           Your current deal ends in <strong>${escapeHtml(quote.expiryDisplay || '—')}</strong>. Review indicative terms from <strong>${exclusiveRateLabel}</strong> on your remaining balance of ${formatCurrency(quote.loanAmount)}.
         </p>
-        <button type="button" class="btn opportunities-section__cta" data-action="open-financials-edit">Review mortgage details</button>
+        <a class="btn opportunities-section__cta" href="#/portfolio/property/${index}/mortgage-renewal-quote">View</a>
       </div>
     </section>
   `;
@@ -2055,9 +2061,9 @@ function renderMortgageRenewalOpportunitySection(portfolio) {
           <strong>${escapeHtml(firstAddress)}</strong> has a buy-to-let mortgage approaching its renewal date. Lloyds would like to offer you an exclusive remortgage rate as an existing landlord customer.
         </p>
         <p class="opportunities-section__detail">
-          Current deal ends in <strong>${escapeHtml(first.quote.expiryDisplay || '—')}</strong> — review indicative terms from ${exclusiveRateLabel} on the financials tab.
+          Current deal ends in <strong>${escapeHtml(first.quote.expiryDisplay || '—')}</strong> — review indicative terms from ${exclusiveRateLabel} ahead of renewal.
         </p>
-        <a class="btn opportunities-section__cta" href="#/portfolio/property/${first.index}/financials">View</a>
+        <a class="btn opportunities-section__cta" href="#/portfolio/property/${first.index}/mortgage-renewal-quote">View</a>
       </div>
     </section>
   `;
@@ -2248,6 +2254,124 @@ function renderPropertyRefinanceQuote(index) {
                     <th scope="col">Metric</th>
                     <th scope="col">Current portfolio</th>
                     <th scope="col">After refinance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${renderPortfolioComparisonRow('Total portfolio value', formatCurrency(beforeMetrics.totalPortfolioValue), formatCurrency(afterMetrics.totalPortfolioValue))}
+                  ${renderPortfolioComparisonRow('Total mortgage balance', formatCurrency(beforeMetrics.totalMortgageBalance), formatCurrency(afterMetrics.totalMortgageBalance))}
+                  ${renderPortfolioComparisonRow('Total equity', beforeMetrics.hasEquityData ? formatCurrency(beforeMetrics.totalEquity) : renderMissingIndicator(), afterMetrics.hasEquityData ? formatCurrency(afterMetrics.totalEquity) : renderMissingIndicator())}
+                  ${renderPortfolioComparisonRow('Portfolio LTV', beforeMetrics.hasEquityData ? formatPercent(beforeMetrics.overallLtv) : renderMissingIndicator(), afterMetrics.hasEquityData ? formatPercent(afterMetrics.overallLtv) : renderMissingIndicator())}
+                  ${renderPortfolioComparisonRow('Total market rent', formatCurrency(beforeMetrics.totalMarketRent), formatCurrency(afterMetrics.totalMarketRent))}
+                  ${renderPortfolioComparisonRow('Total achieved rent', renderRentAgreedDisplay(beforeMetrics.totalRentAgreed, true), renderRentAgreedDisplay(afterMetrics.totalRentAgreed, true))}
+                  ${renderPortfolioComparisonRow('Gross yield', formatPercent(beforeMetrics.grossYield), formatPercent(afterMetrics.grossYield))}
+                  ${renderPortfolioComparisonRow('Interest coverage ratio', formatPercent(beforeMetrics.icr), formatPercent(afterMetrics.icr))}
+                  ${renderPortfolioComparisonRow('Properties held', String(beforeMetrics.totalProperties), String(afterMetrics.totalProperties))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div class="btn-group">
+          <a class="btn btn-secondary" href="#/portfolio/property/${index}/financials">Back to financials</a>
+          <a class="btn btn-primary" href="#/portfolio/summary">Return to portfolio</a>
+        </div>
+      </div>
+    </main>
+    ${renderFooter()}
+  `;
+
+  bindCommonActions();
+}
+
+function renderPropertyMortgageRenewalQuote(index) {
+  const portfolio = state.portfolio;
+  if (!portfolio) {
+    navigate('/dashboard');
+    return;
+  }
+
+  const property = getPortfolioProperty(index);
+  if (!property) {
+    navigate('/portfolio/summary');
+    return;
+  }
+
+  if (!hasMortgageRenewalOpportunity(property)) {
+    navigate(`/portfolio/property/${index}/financials`);
+    return;
+  }
+
+  const quote = buildMortgageRenewalQuote(property);
+  const beforeMetrics = computePortfolioMetrics(portfolio.properties);
+  const afterMetrics = computePortfolioMetricsAfterMortgageRenewal(portfolio.properties, index, quote);
+  const address = formatAddress(property);
+  const exclusiveRateLabel = formatInterestRate(quote.exclusiveRate);
+
+  app.innerHTML = `
+    ${renderHeader()}
+    <main class="page-shell">
+      <div class="page-content">
+        <div class="breadcrumb">
+          <a href="#/dashboard">Dashboard</a> /
+          <a href="#/portfolio/summary">Portfolio summary</a> /
+          <a href="#/portfolio/property/${index}/financials">Financials</a> /
+          Renewal quote
+        </div>
+        <h1 class="page-title">Indicative renewal quote</h1>
+        <p class="page-intro">${escapeHtml(address)}</p>
+
+        <div class="quote-layout">
+          <section class="card quote-summary">
+            <h2 class="section-title">Indicative terms</h2>
+            <dl class="quote-summary__grid">
+              <div class="quote-summary__item">
+                <dt>Remaining mortgage balance</dt>
+                <dd>${formatCurrency(quote.loanAmount)}</dd>
+              </div>
+              <div class="quote-summary__item">
+                <dt>Current product end date</dt>
+                <dd>${escapeHtml(quote.expiryDisplay || '—')}</dd>
+              </div>
+              <div class="quote-summary__item">
+                <dt>Current interest rate</dt>
+                <dd>${formatInterestRate(quote.currentRate)}</dd>
+              </div>
+              <div class="quote-summary__item">
+                <dt>Exclusive renewal rate</dt>
+                <dd>${exclusiveRateLabel}</dd>
+              </div>
+              <div class="quote-summary__item">
+                <dt>Rate reduction</dt>
+                <dd>${formatInterestRate(quote.rateDifference)}</dd>
+              </div>
+              <div class="quote-summary__item">
+                <dt>Current monthly payment</dt>
+                <dd>${formatCurrency(quote.currentMonthlyPayment)}<span class="cell-suffix">/mo</span></dd>
+              </div>
+              <div class="quote-summary__item quote-summary__item--highlight">
+                <dt>Indicative new monthly payment</dt>
+                <dd>${formatCurrency(quote.newMonthlyPayment)}<span class="cell-suffix">/mo</span></dd>
+              </div>
+              <div class="quote-summary__item quote-summary__item--highlight">
+                <dt>Estimated monthly saving</dt>
+                <dd>${formatCurrency(quote.monthlySavings)}<span class="cell-suffix">/mo</span></dd>
+              </div>
+            </dl>
+            <p class="quote-summary__note">Illustrative renewal remortgage quote for existing Lloyds landlord customers, based on interest-only servicing at ${exclusiveRateLabel} on your existing balance. Subject to affordability, valuation, product availability and lending criteria.</p>
+            ${renderLbgApplyButton()}
+          </section>
+
+          <section class="card quote-comparison">
+            <h2 class="section-title">Portfolio impact</h2>
+            <p class="quote-comparison__intro">Estimated effect on your portfolio summary if this property renews onto the exclusive remortgage rate.</p>
+            <div class="data-table-wrap">
+              <table class="data-table quote-comparison__table">
+                <thead>
+                  <tr>
+                    <th scope="col">Metric</th>
+                    <th scope="col">Current portfolio</th>
+                    <th scope="col">After renewal</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -3737,6 +3861,10 @@ function render() {
   }
   if (parsed.type === 'refinance-quote') {
     renderPropertyRefinanceQuote(parsed.index);
+    return;
+  }
+  if (parsed.type === 'mortgage-renewal-quote') {
+    renderPropertyMortgageRenewalQuote(parsed.index);
     return;
   }
   if (parsed.type === 'rent-review') {
